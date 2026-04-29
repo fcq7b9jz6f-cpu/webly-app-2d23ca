@@ -1,125 +1,121 @@
-import React, { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { ShoppingBag, Menu, X, UserCircle, LogOut } from 'lucide-react';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { ShoppingBag, Menu, X, User } from 'lucide-react';
 import useAuthStore from '../stores/authStore';
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { user, signOut } = useAuthStore();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const location = useLocation();
+  const { isAuthenticated, signOut } = useAuthStore();
 
-  const handleLogout = async () => {
-    await signOut();
-    // Navigate or show a message if needed. The store will handle the state.
-  };
-
-  const navLinks = [
-    { href: '/', label: 'الرئيسية' },
-    { href: '/products', label: 'منتجاتنا' },
-    { href: '/about', label: 'عن المتجر' },
-    { href: '/contact', label: 'تواصل معنا' },
+  const links = [
+    { name: 'الرئيسية', path: '/' },
+    { name: 'منتجاتنا', path: '/products' },
+    { name: 'دليل المقاسات', path: '/size-guide' },
+    { name: 'عن المتجر', path: '/about' },
+    { name: 'تواصل معنا', path: '/contact' },
   ];
 
   return (
-    <nav className="bg-black/80 backdrop-blur-lg sticky top-0 z-50 border-b border-zinc-800">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          
-          {/* Logo */}
           <div className="flex-shrink-0">
-            <Link to="/" className="text-3xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400">
-              أناقة
+            <Link to="/" className="text-3xl font-black tracking-tighter text-white">
+              أناقة<span className="text-violet-500">.</span>
             </Link>
           </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:space-x-8">
-            {navLinks.map((link) => (
-              <NavLink
-                key={link.href}
-                to={link.href}
-                className={({ isActive }) =>
-                  `text-lg font-medium transition-colors duration-300 ${isActive ? 'text-violet-400' : 'text-zinc-300 hover:text-white'}`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-
-          {/* Icons and Auth section */}
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <div className="hidden md:flex items-center space-x-4">
-                <Link to="/profile" className="flex items-center gap-2 text-zinc-300 hover:text-white transition-colors">
-                  <UserCircle size={22} />
-                  <span>ملفي الشخصي</span>
+          
+          <div className="hidden md:block">
+            <div className="ml-10 flex items-center space-x-8 space-x-reverse">
+              {links.map((link) => (
+                <Link
+                  key={link.name}
+                  to={link.path}
+                  className={`text-sm font-bold transition-colors ${
+                    location.pathname === link.path
+                      ? 'text-violet-400'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  {link.name}
                 </Link>
-                <button onClick={handleLogout} className="flex items-center gap-2 text-zinc-300 hover:text-red-400 transition-colors">
-                  <LogOut size={22} />
-                  <span>خروج</span>
-                </button>
-              </div>
-            ) : (
-              <div className="hidden md:flex items-center space-x-2">
-                 <Link to="/login" className="text-lg font-medium text-zinc-300 hover:text-white transition-colors px-4 py-2 rounded-lg">
-                  دخول
-                </Link>
-                 <Link to="/signup" className="text-lg font-bold rounded-full px-6 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:opacity-90 transition-opacity">
-                   حساب جديد
-                </Link>
-              </div>
-            )}
-            
-            <Link to="/cart" className="text-zinc-300 hover:text-white transition-colors">
-              <ShoppingBag size={24} />
-            </Link>
-
-            {/* Mobile Menu Button */}
-            <div className="md:hidden flex items-center">
-              <button onClick={() => setIsOpen(!isOpen)} className="text-zinc-300 hover:text-white">
-                {isOpen ? <X size={26} /> : <Menu size={26} />}
-              </button>
+              ))}
             </div>
+          </div>
+
+          <div className="hidden md:flex items-center gap-4">
+             {isAuthenticated ? (
+                <>
+                  <Link to="/profile" className="flex items-center gap-2 text-gray-300 hover:text-white font-bold text-sm transition-colors">
+                     <User size={18} /> حسابي
+                  </Link>
+                  <button onClick={signOut} className="text-sm font-bold text-red-400 hover:text-red-300 transition-colors">
+                     خروج
+                  </button>
+                </>
+             ) : (
+                <>
+                  <Link to="/login" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">
+                     دخول
+                  </Link>
+                  <Link to="/signup" className="text-sm font-bold bg-white text-black px-4 py-2 rounded-full hover:bg-gray-200 transition-colors">
+                     حساب جديد
+                  </Link>
+                </>
+             )}
+            <button className="text-white relative p-2">
+              <ShoppingBag size={24} />
+              <span className="absolute top-0 right-0 bg-violet-500 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">0</span>
+            </button>
+          </div>
+
+          <div className="md:hidden flex items-center gap-4">
+            <button className="text-white relative p-2">
+              <ShoppingBag size={24} />
+              <span className="absolute top-0 right-0 bg-violet-500 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">0</span>
+            </button>
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="text-gray-300 hover:text-white p-2"
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
         </div>
       </div>
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-black border-t border-zinc-800">
+        <div className="md:hidden bg-zinc-950 border-b border-white/10">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {navLinks.map((link) => (
-              <NavLink
-                key={link.href}
-                to={link.href}
+            {links.map((link) => (
+              <Link
+                key={link.name}
+                to={link.path}
                 onClick={() => setIsOpen(false)}
-                className={({isActive}) => `block px-3 py-3 rounded-md text-base font-medium ${isActive ? 'bg-zinc-900 text-violet-400' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'}`}
+                className={`block px-3 py-4 text-base font-bold rounded-md ${
+                  location.pathname === link.path
+                    ? 'bg-zinc-900 text-violet-400'
+                    : 'text-gray-300 hover:bg-zinc-900 hover:text-white'
+                }`}
               >
-                {link.label}
-              </NavLink>
+                {link.name}
+              </Link>
             ))}
-             <div className="border-t border-zinc-700 my-4" />
-             {user ? (
-                <div className="px-2 space-y-3">
-                    <Link to="/profile" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-md text-base font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white">
-                        <UserCircle size={22} />
-                        <span>ملفي الشخصي</span>
-                    </Link>
-                    <button onClick={() => { handleLogout(); setIsOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-md text-base font-medium text-zinc-300 hover:bg-zinc-800 hover:text-red-400">
-                        <LogOut size={22} />
-                        <span>تسجيل الخروج</span>
-                    </button>
-                </div>
-            ) : (
-                <div className="px-2 space-y-3">
-                    <Link to="/login" onClick={() => setIsOpen(false)} className="block px-3 py-3 rounded-md text-base font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white">
-                        تسجيل الدخول
-                    </Link>
-                    <Link to="/signup" onClick={() => setIsOpen(false)} className="block text-center text-base font-bold rounded-full px-6 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:opacity-90 transition-opacity">
-                        إنشاء حساب جديد
-                    </Link>
-                </div>
-            )}
+            <div className="pt-4 pb-2 border-t border-white/10 flex flex-col gap-2 px-3">
+                {isAuthenticated ? (
+                    <>
+                      <Link to="/profile" onClick={() => setIsOpen(false)} className="text-center w-full bg-zinc-900 text-white font-bold py-3 rounded-xl">ملفي الشخصي</Link>
+                      <button onClick={() => { signOut(); setIsOpen(false); }} className="text-center w-full text-red-500 font-bold py-3">تسجيل الخروج</button>
+                    </>
+                ) : (
+                    <>
+                       <Link to="/login" onClick={() => setIsOpen(false)} className="text-center w-full bg-zinc-900 text-white font-bold py-3 rounded-xl">تسجيل الدخول</Link>
+                       <Link to="/signup" onClick={() => setIsOpen(false)} className="text-center w-full bg-violet-600 text-white font-bold py-3 rounded-xl">حساب جديد</Link>
+                    </>
+                )}
+            </div>
           </div>
         </div>
       )}

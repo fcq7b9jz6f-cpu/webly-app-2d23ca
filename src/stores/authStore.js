@@ -1,39 +1,42 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-// تصدير باسم محدد لتجنب مشاكل default export في بعض البيئات
-export const useAuthStore = create((set) => ({
-  user: null,
-  loading: true,
-  
-  init: async () => {
-    // التأكد من وجود Supabase في النافذة
-    const supabase = window.__SUPABASE__;
-    if (!supabase) {
-      console.warn("Supabase is not initialized. Please connect Supabase in the dashboard.");
-      set({ loading: false });
-      return;
-    }
-
-    try {
-      // الحصول على الجلسة الحالية
-      const { data: { session } } = await supabase.auth.getSession();
-      set({ user: session?.user ?? null, loading: false });
-
-      // الاستماع لتغييرات حالة تسجيل الدخول
-      supabase.auth.onAuthStateChange((_event, session) => {
-        set({ user: session?.user ?? null, loading: false });
-      });
-    } catch (error) {
-      console.error("Auth initialization error:", error);
-      set({ loading: false });
-    }
-  },
-
-  signOut: async () => {
-    const supabase = window.__SUPABASE__;
-    if (supabase) {
-      await supabase.auth.signOut();
-      set({ user: null });
-    }
+const useAuthStore = create((set) => {
+  // Check default session from window.__SUPABASE__
+  let initUser = null;
+  if (window.__SUPABASE__) {
+    // Sync blocking fetch or rely on listener
+    window.__SUPABASE__.auth.getSession().then(({ data }) => {
+      if (data?.session?.user) {
+        set({ user: data.session.user, isAuthenticated: true, isLoading: false });
+      } else {
+        set({ isLoading: false });
+      }
+    });
   }
-}));
+
+  return {
+    user: initUser,
+    isAuthenticated: !!initUser,
+    isLoading: true, // initial state while checking session
+    setUser: (user) => set({ user, isAuthenticated: !!user, isLoading: false }),
+    signOut: async () => {
+      if (window.__SUPABASE__) {
+        await window.__SUPABASE__.auth.signOut();
+      }
+      set({ user: null, isAuthenticated: false });
+    },
+  };
+});
+
+// Setup listener
+if (window.__SUPABASE__) {
+  window.__SUPABASE__.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      useAuthStore.getState().setUser(session.user);
+    } else {
+      useAuthStore.getState().setUser(null);
+    }
+  });
+}
+
+export default useAuthStore;
