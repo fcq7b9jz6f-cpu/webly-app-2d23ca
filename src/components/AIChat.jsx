@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, X, Send, Sparkles, User, Bot } from 'lucide-react';
+import { Send, Bot, User, X, MessageSquare, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AIChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'أهلاً بك في "أناقة"! أنا مساعدك الذكي، كيف يمكنني مساعدتك اليوم في اختيار ملابسك؟' }
+    { role: 'assistant', content: 'مرحباً بك في أناقة! أنا مساعدك الذكي، كيف يمكنني مساعدتك اليوم في اختيار ملابسك؟' }
   ]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -18,26 +18,23 @@ export default function AIChat() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || loading) return;
 
-    const userMessage = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
+    const userMessage = input.trim();
     setInput('');
-    setIsLoading(true);
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setLoading(true);
 
     try {
       const response = await fetch('/api/proxy/lemondata/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-4o-mini',
           messages: [
-            { 
-              role: 'system', 
-              content: 'أنت مساعد ذكي لمتجر ملابس دروبشيبينج اسمه "أناقة". مهمتك مساعدة العملاء في اختيار الملابس، تقديم نصائح تنسيق (Styling)، الإجابة عن استفسارات المقاسات، والسياسات مثل الشحن والاسترجاع. رد دائماً باللغة العربية وبأسلوب أنيق وودود.' 
-            },
+            { role: 'system', content: 'أنت مساعد ذكي لمتجر ملابس دروبشيبينج يسمى "أناقة". ساعد المستخدمين في اختيار المقاسات، تنسيق الألوان، واقترح عليهم موديلات عصرية. تحدث بلهجة عربية ودودة واحترافية.' },
             ...messages,
-            userMessage
+            { role: 'user', content: userMessage }
           ]
         })
       });
@@ -46,91 +43,99 @@ export default function AIChat() {
       const aiResponse = data.choices[0].message.content;
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
     } catch (error) {
-      console.error('AI Chat Error:', error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'عذراً، واجهت مشكلة تقنية صغيرة. هل يمكنك المحاولة مرة أخرى؟' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'عذراً، واجهت مشكلة في الاتصال. حاول مرة أخرى لاحقاً.' }]);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <>
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-2xl hover:scale-110 transition-transform"
+      >
+        <MessageSquare className="w-6 h-6" />
+      </button>
+
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl w-80 sm:w-96 overflow-hidden mb-4"
+            initial={{ opacity: 0, y: 100, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 100, scale: 0.9 }}
+            className="fixed bottom-24 right-6 z-50 w-full max-w-[350px] sm:max-w-md h-[550px] bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-violet-600 to-fuchsia-600 p-4 flex justify-between items-center text-white">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                <span className="font-bold">مساعد أناقة الذكرى</span>
+            <div className="p-4 bg-zinc-900 border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-violet-600/20 flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">مساعد أناقة الذكي</h3>
+                  <p className="text-[10px] text-emerald-400">متصل الآن</p>
+                </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1 rounded">
-                <X className="w-5 h-5" />
+              <button 
+                onClick={() => setIsOpen(false)}
+                className="p-2 hover:bg-white/5 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5 text-zinc-400" />
               </button>
             </div>
 
             {/* Messages */}
             <div 
               ref={scrollRef}
-              className="h-96 overflow-y-auto p-4 space-y-4 bg-zinc-950/50"
+              className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
             >
-              {messages.map((msg, index) => (
-                <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`flex gap-2 max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-violet-600' : 'bg-zinc-800'}`}>
-                      {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-violet-400" />}
-                    </div>
-                    <div className={`p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-violet-600 text-white rounded-tr-none' : 'bg-zinc-800 text-zinc-200 rounded-tl-none'}`}>
-                      {msg.content}
-                    </div>
+              {messages.map((msg, idx) => (
+                <div 
+                  key={idx}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${
+                    msg.role === 'user' 
+                      ? 'bg-violet-600 text-white rounded-tr-none' 
+                      : 'bg-zinc-800 text-zinc-200 rounded-tl-none'
+                  }`}>
+                    {msg.content}
                   </div>
                 </div>
               ))}
-              {isLoading && (
+              {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-zinc-800 p-3 rounded-2xl text-zinc-400 text-sm animate-pulse">
-                    جاري التفكير...
+                  <div className="bg-zinc-800 p-3 rounded-2xl rounded-tl-none">
+                    <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
                   </div>
                 </div>
               )}
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-white/10 bg-zinc-900">
-              <div className="flex gap-2">
+            <div className="p-4 bg-zinc-900 border-t border-white/10">
+              <div className="relative">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="اسأل خبير الموضة..."
-                  className="flex-1 bg-zinc-800 border-none rounded-xl px-4 py-2 text-white text-sm focus:ring-2 focus:ring-violet-500 outline-none"
+                  placeholder="اسألني أي شيء عن الموضة..."
+                  className="w-full bg-zinc-800 border-none rounded-2xl py-3 px-4 pr-12 text-sm text-white focus:ring-2 focus:ring-violet-500 transition-all placeholder:text-zinc-500"
                 />
                 <button
                   onClick={handleSend}
-                  disabled={isLoading}
-                  className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 p-2 rounded-xl text-white transition-colors"
+                  disabled={loading || !input.trim()}
+                  className="absolute left-2 top-1.5 p-1.5 rounded-xl bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 disabled:hover:bg-violet-600 transition-colors"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4 rtl:rotate-180" />
                 </button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-gradient-to-r from-violet-600 to-fuchsia-600 p-4 rounded-full shadow-lg text-white hover:scale-110 transition-transform flex items-center gap-2"
-      >
-        <MessageSquare className="w-6 h-6" />
-        <span className="font-bold hidden sm:inline">مساعدة ذكية</span>
-      </button>
-    </div>
+    </>
   );
 }

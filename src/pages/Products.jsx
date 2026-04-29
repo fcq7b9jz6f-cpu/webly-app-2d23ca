@@ -1,97 +1,144 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, ShoppingBag, Star, ArrowRight } from 'lucide-react';
+import { Search, Filter, ShoppingBag, Loader2 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import { motion } from 'framer-motion';
 
-const CATEGORIES = ["الكل", "رجالي", "حريمي", "أطفال", "إكسسوارات"];
+export default function Products() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
 
-const Products = () => {
-    const [activeCategory, setActiveCategory] = useState("الكل");
-    const [searchQuery, setSearchQuery] = useState("");
-    const [products, setProducts] = useState([
-        { id: 1, name: "جاكيت منفوخ عصري", price: 1200, category: "رجالي", image: "https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", description: "جاكيت شتوي أنيق ومريح يوفر الدفء اللازم في الأجواء الباردة مع لمسة عصرية تناسب كل الأوقات." },
-        { id: 2, name: "فستان سهرة كلاسيكي", price: 2500, category: "حريمي", image: "https://images.pexels.com/photos/1755428/pexels-photo-1755428.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", description: "فستان سهرة بتصميم راقٍ من الحرير الطبيعي، مثالي للمناسبات الخاصة والحفلات الرسمية." },
-        { id: 3, name: "تيشرت قطني أساسي", price: 450, category: "رجالي", image: "https://images.pexels.com/photos/4066290/pexels-photo-4066290.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", description: "تيشرت مصنوع من قطن 100% عالي الجودة، مريح جداً للاستخدام اليومي وبألوان متعددة." },
-        { id: 4, name: "طقم أطفال قطعتين", price: 850, category: "أطفال", image: "https://images.pexels.com/photos/1619697/pexels-photo-1619697.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", description: "طقم أنيق للأطفال يجمع بين الراحة والأناقة، مناسب للنزهات اليومية واللعب." },
-        { id: 5, name: "ساعة يد فاخرة", price: 3200, category: "إكسسوارات", image: "https://images.pexels.com/photos/190819/pexels-photo-190819.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", description: "ساعة يد بتصميم كلاسيكي ومينا واضحة، مقاومة للماء وتضيف لمسة من الرقي لإطلالتك." },
-        { id: 6, name: "كنزة صوفية ناعمة", price: 950, category: "حريمي", image: "https://images.pexels.com/photos/2065200/pexels-photo-2065200.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", description: "كنزة من الصوف الناعم بتصميم واسع مريح، مثالية للأيام الخريفية الباردة." },
-        { id: 7, name: "حذاء رياضي متطور", price: 1800, category: "رجالي", image: "https://images.pexels.com/photos/1456706/pexels-photo-1456706.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", description: "حذاء رياضي خفيف الوزن مع وسادة هوائية لراحة قصوى أثناء الجري والمشي لمسافات طويلة." },
-        { id: 8, name: "حقيبة يد جلدية", price: 2100, category: "إكسسوارات", image: "https://images.pexels.com/photos/1152077/pexels-photo-1152077.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", description: "حقيبة يد مصنوعة من الجلد الطبيعي الفاخر، تتميز بمساحة واسعة وتصميم يحاكي أحدث صيحات الموضة العالمية." },
-    ]);
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch('/api/data/products');
+        const data = await response.json();
+        setProducts(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
-    const filteredProducts = products.filter(product => {
-        const matchesCategory = activeCategory === "الكل" || product.category === activeCategory;
-        const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = filter === 'all' || p.category === filter;
+    return matchesSearch && matchesCategory;
+  });
 
-    return (
-        <div className="bg-black text-white min-h-screen pt-24 pb-12">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Header Section */}
-                <div className="mb-12 text-center md:text-right">
-                    <h1 className="text-4xl md:text-6xl font-black mb-4 bg-gradient-to-l from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent italic">
-                        كل القطع، كل الأناقة
-                    </h1>
-                    <p className="text-zinc-400 max-w-2xl md:ml-0 md:mr-auto text-lg leading-relaxed">
-                        استكشف مجموعتنا المختارة بعناية لأحدث صيحات الموضة العالمية. من الملابس اليومية المريحة إلى أطقم السهرات الفاخرة، نوفر لك كل ما تحتاجه للتميز.
-                    </p>
-                </div>
+  return (
+    <div className="min-h-screen pt-24 pb-16 px-4 sm:px-8">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto mb-16 space-y-8">
+        <header>
+          <motion.h1 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-4xl sm:text-6xl font-black mb-4 tracking-tight"
+          >
+            استعرض <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-500">مجموعتنا</span>
+          </motion.h1>
+          <p className="text-zinc-400 max-w-2xl text-lg">
+            كل قطعة نختارها بعناية لتناسب ذوقك الرفيع. ابحث عن النمط الذي يمثلك في مجموعتنا المتنوعة والمحدثة باستمرار.
+          </p>
+        </header>
 
-                {/* Filters and Search */}
-                <div className="flex flex-col md:flex-row gap-6 justify-between items-center mb-10 bg-zinc-900/50 p-6 rounded-3xl border border-white/5 backdrop-blur-sm">
-                    {/* Categories UI */}
-                    <div className="flex gap-2 p-1 bg-black/40 rounded-full overflow-x-auto no-scrollbar max-w-full">
-                        {CATEGORIES.map((cat) => (
-                            <button
-                                key={cat}
-                                onClick={() => setActiveCategory(cat)}
-                                className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap ${
-                                    activeCategory === cat 
-                                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' 
-                                    : 'text-zinc-400 hover:text-white'
-                                }`}
-                            >
-                                {cat}
-                            </button>
-                        ))}
-                    </div>
+        {/* Controls */}
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full md:max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+            <input
+              type="text"
+              placeholder="ابحث عن موديل، لون، أو مقاس..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-zinc-900 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:ring-2 focus:ring-violet-500 outline-none transition-all"
+            />
+          </div>
 
-                    {/* Search Bar */}
-                    <div className="relative w-full md:w-80">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 w-5 h-5" />
-                        <input
-                            type="text"
-                            placeholder="ابحث عن منتج..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-black/60 border border-white/10 rounded-full py-2.5 pl-12 pr-6 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder:text-zinc-600"
-                        />
-                    </div>
-                </div>
-
-                {/* Products Grid */}
-                {filteredProducts.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {filteredProducts.map((product) => (
-                            <ProductCard key={product.id} product={product} />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-20 flex flex-col items-center">
-                        <ShoppingBag className="w-16 h-16 text-zinc-700 mb-4" />
-                        <h3 className="text-2xl font-bold text-zinc-300">لم نجد ما تبحث عنه</h3>
-                        <p className="text-zinc-500 mt-2">جرب تغيير كلمات البحث أو التصنيف</p>
-                        <button 
-                            onClick={() => {setActiveCategory("الكل"); setSearchQuery("")}}
-                            className="mt-6 text-purple-400 hover:text-purple-300 flex items-center gap-2"
-                        >
-                            مسح جميع الفلاتر <ArrowRight className="w-4 h-4 rotate-180" />
-                        </button>
-                    </div>
-                )}
-            </div>
+          <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 no-scrollbar">
+            {['all', 'men', 'women', 'kids'].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setFilter(cat)}
+                className={`px-6 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+                  filter === cat 
+                    ? 'bg-violet-600 text-white' 
+                    : 'bg-zinc-900 text-zinc-400 border border-white/5 hover:border-white/20'
+                }`}
+              >
+                {cat === 'all' ? 'الكل' : cat === 'men' ? 'رجال' : cat === 'women' ? 'نساء' : 'أطفال'}
+              </button>
+            ))}
+          </div>
         </div>
-    );
-};
+      </div>
 
-export default Products;
+      {/* Grid */}
+      <div className="max-w-7xl mx-auto">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 space-y-4">
+            <Loader2 className="w-12 h-12 text-violet-500 animate-spin" />
+            <p className="text-zinc-500">جاري اختيار أجمل القطع لك...</p>
+          </div>
+        ) : filteredProducts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {filteredProducts.map((product, i) => (
+              <motion.div
+                key={product.id || i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <ProductCard product={product} />
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-32 border border-dashed border-white/10 rounded-3xl">
+            <ShoppingBag className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-zinc-300">لم نجد ما تبحث عنه</h3>
+            <p className="text-zinc-500 mt-2">جرب تعديل كلمات البحث أو الفلاتر</p>
+          </div>
+        )}
+      </div>
+
+      {/* SEO Content Section */}
+      <div className="max-w-4xl mx-auto mt-32 space-y-12">
+        <section className="space-y-6">
+          <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-500">لماذا تختار ملابس "أناقة"؟</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-zinc-400 leading-relaxed">
+            <p>
+              نحن نؤمن في متجر "أناقة" أن الملابس ليست مجرد أقمشة نرتديها، بل هي وسيلة للتعبير عن الذات والثقة. لذلك، نقوم بالتعاون مع أفضل المصنعين حول العالم لنوفر لك قطعاً تجمع بين جودة الخامات وأحدث صيحات الموضة العالمية. سواء كنت تبحث عن إطلالة رسمية للعمل، أو ملابس مريحة ليوم كاجوال، فإن تشكيلتنا تغطي كافة احتياجاتك.
+            </p>
+            <p>
+              نتميز بنظام دروبشيبينج متطور يضمن لك وصول المنتجات بأمان وسرعة. نهتم بأدق التفاصيل من أول خيط في القماش وحتى تغليف المنتج ووصوله إلى باب منزلك. استكشف مجموعتنا اليوم واستمتع بتجربة تسوق لا مثيل لها مع توفير دليل مقاسات دقيق يقلل من احتمالية الخطأ في الاختيار.
+            </p>
+          </div>
+        </section>
+
+        <section className="bg-zinc-900/50 p-8 rounded-3xl border border-white/5 space-y-6">
+          <h3 className="text-2xl font-bold text-white">نصائح لتسوق الموضة عبر الإنترنت</h3>
+          <ul className="space-y-4 text-zinc-400">
+            <li className="flex gap-4">
+              <span className="text-violet-500 font-black">01</span>
+              <span>تأكد دائماً من مراجعة **دليل المقاسات** الخاص بكل منتج، فالمقاسات قد تختلف بين الماركات العالمية والمحلية.</span>
+            </li>
+            <li className="flex gap-4">
+              <span className="text-violet-500 font-black">02</span>
+              <span>اقرأ تفاصيل الخامة بعناية؛ إذا كنت تبحث عن الراحة ابحث عن القطن، وإذا كنت تبحث عن الأناقة في الشتاء فالصوف والجلد هما الخيار الأمثل.</span>
+            </li>
+            <li className="flex gap-4">
+              <span className="text-violet-500 font-black">03</span>
+              <span>تابع مجموعاتنا الموسمية باستمرار، فنحن نوفر تخفيضات هائلة عند تغيير المواسم تصل إلى 50%.</span>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  );
+}
