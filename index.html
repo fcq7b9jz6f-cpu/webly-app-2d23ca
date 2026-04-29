@@ -17,7 +17,6 @@
   * { box-sizing: border-box; }
   html, body, #root { margin: 0; min-height: 100%; }
   body { font-family: 'Cairo', 'Inter', system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; background: #0f172a; color: #f8fafc; }
-  .webly-loader { min-height: 100vh; display: grid; place-items: center; color: #94a3b8; }
 </style>
 <script type="importmap">
 {
@@ -42,7 +41,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
 </head>
 <body>
-<div id="root"><div class="webly-loader">جارٍ تحميل التطبيق...</div></div>
+<div id="root"></div>
 
 <script>
   // ───── Webly runtime config ─────
@@ -259,19 +258,26 @@
       if (required && required.size) {
         const missing = [];
         for (const name of required) {
-          const reHasNamed = new RegExp(
-            "export\\s+(?:async\\s+)?(?:function|class|const|let|var)\\s+" + name + "\\b"
-            + "|export\\s*\\{[^}]*\\b" + name + "\\b[^}]*\\}"
+          // Check if the binding exists ANYWHERE in the module (declaration or export).
+          // We avoid shadowing existing let/const/class/function/var declarations.
+          const reAnyDecl = new RegExp(
+            "(?:^|[^\\w$])(?:function\\*?|class|const|let|var)\\s+" + name + "\\b"
+          );
+          const reNamedExport = new RegExp(
+            "export\\s*\\{[^}]*\\b" + name + "\\b[^}]*\\}"
             + "|\\bas\\s+" + name + "\\b"
             + "|export\\s+\\*\\s+from"
           );
-          if (!reHasNamed.test(code)) missing.push(name);
+          if (!reAnyDecl.test(code) && !reNamedExport.test(code)) missing.push(name);
         }
         if (missing.length) {
-          // Re-emit: declare each missing name as undefined and export it.
-          const decls = missing.map(function(n){ return "var " + n + " = undefined;"; }).join(' ');
-          const exps = "export { " + missing.join(', ') + " };";
-          code += "\n;" + decls + " " + exps + "\n";
+          // Use unique internal names + re-export aliases to avoid ANY shadowing
+          // of user-declared let/const/class bindings inside the same module.
+          const lines = missing.map(function(n){
+            const uid = "__webly_missing_" + n + "_" + Math.random().toString(36).slice(2, 8);
+            return "const " + uid + " = undefined; export { " + uid + " as " + n + " };";
+          });
+          code += "\n;" + lines.join('\n') + "\n";
           console.warn('[Webly] Backfilled missing exports', missing, 'in', path);
         }
       }
