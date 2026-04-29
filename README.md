@@ -7,6 +7,7 @@
 هذا الملف يستخدمه Webly كذاكرة طويلة الأمد للمشروع. لا تحذفه.
 
 ### الملفات
+- `pages/Contact.jsx`
 - `/main.jsx`
 - `/App.jsx`
 - `/components/Navbar.jsx`
@@ -17,8 +18,12 @@
 - `pages/ProductDetail.jsx`
 - `pages/About.jsx`
 - `pages/SizeGuide.jsx`
-- `pages/Contact.jsx`
 - `App.jsx`
+- `/pages/Products.jsx`
+- `/pages/ProductDetail.jsx`
+- `/pages/Contact.jsx`
+- `/pages/About.jsx`
+- `/pages/SizeGuide.jsx`
 
 ### النشر
 - البناء: ملفات HTML/JS ثابتة
