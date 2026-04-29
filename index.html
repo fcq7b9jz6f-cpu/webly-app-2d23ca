@@ -251,34 +251,34 @@
         code += "\n;export default {};\n";
       }
 
-      // Shim 2: ensure every named binding requested by ANY consumer of this module
-      // actually exists. If missing, export undefined so the runtime can load the
-      // module and surface a clearer error at call time instead of crashing on import.
+      // Shim 2: ensure every named binding requested by ANY consumer is a real
+      // direct export. A local declaration or a re-export-star alone can still
+      // fail during browser module linking with "Importing binding name ... not found".
       const required = requiredExports[path];
       if (required && required.size) {
-        const missing = [];
+        const additions = [];
         for (const name of required) {
-          // Check if the binding exists ANYWHERE in the module (declaration or export).
-          // We avoid shadowing existing let/const/class/function/var declarations.
           const reAnyDecl = new RegExp(
-            "(?:^|[^\\w$])(?:function\\*?|class|const|let|var)\\s+" + name + "\\b"
+            "(?:^|[^\w$])(?:function\*?|class|const|let|var)\s+" + name + "\b"
           );
           const reNamedExport = new RegExp(
-            "export\\s*\\{[^}]*\\b" + name + "\\b[^}]*\\}"
-            + "|\\bas\\s+" + name + "\\b"
-            + "|export\\s+\\*\\s+from"
+            "export\s+(?:async\s+)?(?:function\*?|class|const|let|var)\s+" + name + "\b"
+            + "|export\s*\{[^}]*\b" + name + "\b[^}]*\}"
+            + "|\bas\s+" + name + "\b"
           );
-          if (!reAnyDecl.test(code) && !reNamedExport.test(code)) missing.push(name);
+          if (reNamedExport.test(code)) continue;
+          if (reAnyDecl.test(code)) additions.push("export { " + name + " };");
+          else {
+            const uid = "__webly_missing_" + name + "_" + Math.random().toString(36).slice(2, 8);
+            additions.push("const " + uid + " = undefined; export { " + uid + " as " + name + " };");
+          }
         }
-        if (missing.length) {
-          // Use unique internal names + re-export aliases to avoid ANY shadowing
-          // of user-declared let/const/class bindings inside the same module.
-          const lines = missing.map(function(n){
-            const uid = "__webly_missing_" + n + "_" + Math.random().toString(36).slice(2, 8);
-            return "const " + uid + " = undefined; export { " + uid + " as " + n + " };";
-          });
-          code += "\n;" + lines.join('\n') + "\n";
-          console.warn('[Webly] Backfilled missing exports', missing, 'in', path);
+        if (additions.length) {
+          code += "
+;" + additions.join('
+') + "
+";
+          console.warn('[Webly] Backfilled direct exports', additions.length, 'in', path);
         }
       }
     }
