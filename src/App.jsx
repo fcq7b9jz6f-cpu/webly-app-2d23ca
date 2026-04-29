@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -14,10 +14,10 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import { useAuthStore } from './stores/authStore';
 
-function App() {
+export default function App() {
   const { init } = useAuthStore();
 
-  useEffect(() => {
+  React.useEffect(() => {
     init();
   }, [init]);
 
@@ -49,5 +49,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

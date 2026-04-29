@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn, ArrowLeft, Loader2 } from 'lucide-react';
+import { LogIn, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore';
 
-const Login = () => {
+export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,101 +17,101 @@ const Login = () => {
 
     const supabase = window.__SUPABASE__;
     if (!supabase) {
-      setError('يرجى ربط Supabase من إعدادات المشروع أولاً.');
+      setError("الرجاء ربط Supabase من إعدادات المشروع أولاً");
       setLoading(false);
       return;
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
+      
       navigate('/profile');
     } catch (err) {
-      setError(err.message || 'حدث خطأ أثناء تسجيل الدخول');
+      setError(err.message === 'Invalid login credentials' ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة' : err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen pt-32 pb-20 px-4 flex items-center justify-center bg-zinc-950 relative overflow-hidden">
-      <div className="absolute top-1/4 -right-20 w-80 h-80 bg-fuchsia-600/20 blur-[120px] rounded-full" />
-      <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-violet-600/20 blur-[120px] rounded-full" />
-      <div className="w-full max-w-md relative">
-        <div className="bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 md:p-12">
+    <div className="min-h-screen flex items-center justify-center px-4 py-20 bg-black relative overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute top-0 left-0 w-full h-full">
+        <div className="absolute top-1/4 -left-20 w-80 h-80 bg-fuchsia-600/20 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-violet-600/20 rounded-full blur-[120px]"></div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        <div className="bg-zinc-900/50 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-10">
-            <h1 className="text-4xl font-black mb-4 tracking-tight">مرحباً بك <span className="text-fuchsia-400">مجدداً</span></h1>
-            <p className="text-zinc-400">سجل دخولك لتكمل رحلة التسوق معنا</p>
+            <div className="inline-flex items-center justify-center p-3 bg-fuchsia-500/10 rounded-2xl mb-4 text-fuchsia-400">
+              <LogIn size={32} />
+            </div>
+            <h1 className="text-3xl font-black text-white mb-2">تسجيل الدخول</h1>
+            <p className="text-zinc-400">مرحباً بك مجدداً في متجر أناقة</p>
           </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl flex items-start gap-3 text-red-400 text-sm">
+              <AlertCircle size={18} className="shrink-0 mt-0.5" />
+              <p>{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-6">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm">
-                {error === "Invalid login credentials" ? "بيانات الدخول غير صحيحة" : error}
-              </div>
-            )}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300 mr-1">البريد الإلكتروني</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-fuchsia-400 transition-colors" />
-                <input
+            <div>
+              <label className="block text-sm font-bold text-zinc-300 mb-2 mr-1">البريد الإلكتروني</label>
+              <div className="relative">
+                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                <input 
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-6 outline-none focus:border-fuchsia-400/50 focus:ring-4 focus:ring-fuchsia-400/10 transition-all text-left"
-                  dir="ltr"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pr-12 pl-4 text-white focus:outline-none focus:border-fuchsia-500 transition-colors"
+                  placeholder="name@example.com"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300 mr-1">كلمة المرور</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-fuchsia-400 transition-colors" />
-                <input
+
+            <div>
+              <div className="flex justify-between items-center mb-2 mr-1">
+                <label className="text-sm font-bold text-zinc-300">كلمة المرور</label>
+                <Link to="#" className="text-xs text-fuchsia-400 hover:text-fuchsia-300 transition-colors font-bold">نسيت كلمة المرور؟</Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                <input 
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pr-12 pl-4 text-white focus:outline-none focus:border-fuchsia-500 transition-colors"
                   placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-6 outline-none focus:border-fuchsia-400/50 focus:ring-4 focus:ring-fuchsia-400/10 transition-all text-left"
-                  dir="ltr"
                 />
               </div>
             </div>
-            <button
+
+            <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black hover:bg-fuchsia-500 hover:text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white font-black py-4 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  تسجيل الدخول
-                </>
-              )}
+              {loading ? <Loader2 className="animate-spin" size={20} /> : 'دخول'}
             </button>
           </form>
-          <div className="mt-8 pt-8 border-t border-white/5 text-center">
-            <p className="text-zinc-500 mb-4 text-sm">ليس لديك حساب؟</p>
-            <Link
-              to="/signup"
-              className="inline-flex items-center gap-2 text-fuchsia-400 hover:text-fuchsia-300 font-bold transition-colors group"
-            >
-              إنشاء حساب جديد
-              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            </Link>
+
+          <div className="mt-8 text-center text-zinc-400">
+            ليس لديك حساب؟{' '}
+            <Link to="/signup" className="text-white font-black hover:text-fuchsia-400 transition-colors">إنشاء حساب جديد</Link>
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default Login;
+}
