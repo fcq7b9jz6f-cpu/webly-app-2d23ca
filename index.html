@@ -258,17 +258,21 @@
       if (required && required.size) {
         const additions = [];
         for (const name of required) {
-          const reAnyDecl = new RegExp(
-            "(?:^|[^\w$])(?:function\*?|class|const|let|var)\s+" + name + "\b"
-          );
-          const reNamedExport = new RegExp(
+          // Detect ANY existing export of this name (declaration, list, alias, default-as).
+          const reAnyExport = new RegExp(
             "export\s+(?:async\s+)?(?:function\*?|class|const|let|var)\s+" + name + "\b"
-            + "|export\s*\{[^}]*\b" + name + "\b[^}]*\}"
-            + "|\bas\s+" + name + "\b"
+            + "|export\s*\{[^}]*(?:\b" + name + "\b\s*(?:,|as\s+\w+|\}))"
+            + "|export\s*\{[^}]*\bas\s+" + name + "\b"
+            + "|export\s+default\s+(?:function\*?|class)\s+" + name + "\b"
           );
-          if (reNamedExport.test(code)) continue;
-          if (reAnyDecl.test(code)) additions.push("export { " + name + " };");
-          else {
+          if (reAnyExport.test(code)) continue;
+          const reAnyDecl = new RegExp(
+            "(?:^|[^\w$.])(?:function\*?|class|const|let|var)\s+" + name + "\b"
+          );
+          if (reAnyDecl.test(code)) {
+            const uid = "__webly_alias_" + name + "_" + Math.random().toString(36).slice(2, 8);
+            additions.push("const " + uid + " = " + name + "; export { " + uid + " as " + name + " };");
+          } else {
             const uid = "__webly_missing_" + name + "_" + Math.random().toString(36).slice(2, 8);
             additions.push("const " + uid + " = undefined; export { " + uid + " as " + name + " };");
           }
