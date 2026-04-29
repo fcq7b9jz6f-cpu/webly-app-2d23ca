@@ -28,7 +28,6 @@
 - `/pages/Login.jsx`
 - `/stores/authStore.js`
 - `/pages/Profile.jsx`
-- `/App.jsx`
 - `stores/authStore.js`
 - `components/ProductCard.jsx`
 - `lib/seed.js`
@@ -37,6 +36,8 @@
 - `pages/Signup.jsx`
 - `components/Navbar.jsx`
 - `pages/Profile.jsx`
+- `/components/AIChat.jsx`
+- `/App.jsx`
 
 ### النشر
 - البناء: ملفات HTML/JS ثابتة
