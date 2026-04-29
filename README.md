@@ -9,7 +9,6 @@
 ### الملفات
 - `pages/Contact.jsx`
 - `/main.jsx`
-- `/App.jsx`
 - `/components/Navbar.jsx`
 - `/components/Footer.jsx`
 - `/pages/Home.jsx`
@@ -24,6 +23,8 @@
 - `/pages/Contact.jsx`
 - `/pages/About.jsx`
 - `/pages/SizeGuide.jsx`
+- `/pages/Legal.jsx`
+- `/App.jsx`
 
 ### النشر
 - البناء: ملفات HTML/JS ثابتة
