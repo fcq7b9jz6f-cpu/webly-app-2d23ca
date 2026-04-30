@@ -221,9 +221,12 @@
     }).code;
     return [
       'const ' + helperName + ' = function(mod, name){',
-      '  if (mod && Object.prototype.hasOwnProperty.call(mod, name)) return mod[name];',
+      '  if (mod && Object.prototype.hasOwnProperty.call(mod, name) && mod[name] !== undefined) return mod[name];',
+      '  if (mod && name in Object(mod) && mod[name] !== undefined) return mod[name];',
       '  const d = mod && mod.default;',
-      '  if (d && (typeof d === "object" || typeof d === "function") && name in d) return d[name];',
+      '  if (d && (typeof d === "object" || typeof d === "function") && name in Object(d) && d[name] !== undefined) return d[name];',
+      // Last-resort fallback: if no match, return the default itself
+      '  if (d !== undefined && d !== null) return d;',
       '  return undefined;',
       '};',
       transformed,
