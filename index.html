@@ -67,7 +67,7 @@
         let newInput = input;
         if (typeof url === 'string') {
           if (url.startsWith('/api/data/')) {
-            const newUrl = window.__WEBLY__.apiBase + url.replace(/^\/api\/data/, '');
+            const newUrl = window.__WEBLY__.apiBase + '/data' + url.replace(/^\/api\/data/, '');
             newInput = (typeof input === 'string') ? newUrl : new Request(newUrl, input);
           } else if (url.startsWith('/api/proxy/')) {
             const newUrl = window.__WEBLY__.proxyBase + url.replace(/^\/api\/proxy/, '');
