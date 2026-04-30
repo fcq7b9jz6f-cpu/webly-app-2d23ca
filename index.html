@@ -161,6 +161,45 @@
     }};
   }
 
+  function safeReactRouterPlugin(babel) {
+    const t = babel.types;
+    return { visitor: {
+      ImportDeclaration(path) {
+        if (path.node.source.value !== 'react-router-dom') return;
+        const browserRouter = path.node.specifiers.find((s) =>
+          t.isImportSpecifier(s) && s.imported && (s.imported.name || s.imported.value) === 'BrowserRouter'
+        );
+        if (!browserRouter) return;
+        const localName = browserRouter.local.name;
+        const base = path.scope.generateUidIdentifier(localName + 'Base');
+        const useCtx = path.scope.generateUidIdentifier('useInRouterContext');
+        const reactNs = path.scope.generateUidIdentifier('ReactRouterSafeReact');
+        const rest = path.node.specifiers.filter((s) => s !== browserRouter);
+        path.node.specifiers = [
+          t.importSpecifier(base, t.identifier('BrowserRouter')),
+          t.importSpecifier(useCtx, t.identifier('useInRouterContext')),
+          ...rest,
+        ];
+        path.insertBefore(t.importDeclaration([t.importNamespaceSpecifier(reactNs)], t.stringLiteral('react')));
+        path.insertAfter(t.variableDeclaration('const', [t.variableDeclarator(
+          t.identifier(localName),
+          t.functionExpression(null, [t.identifier('props')], t.blockStatement([
+            t.variableDeclaration('let', [t.variableDeclarator(t.identifier('inside'), t.booleanLiteral(false))]),
+            t.tryStatement(
+              t.blockStatement([t.expressionStatement(t.assignmentExpression('=', t.identifier('inside'), t.callExpression(useCtx, [])))]),
+              t.catchClause(t.identifier('_e'), t.blockStatement([])),
+            ),
+            t.ifStatement(t.identifier('inside'), t.returnStatement(t.memberExpression(t.identifier('props'), t.identifier('children')))),
+            t.returnStatement(t.callExpression(
+              t.memberExpression(reactNs, t.identifier('createElement')),
+              [base, t.identifier('props'), t.memberExpression(t.identifier('props'), t.identifier('children'))],
+            )),
+          ])),
+        )]));
+      },
+    }};
+  }
+
   function localNamedImportFallbackPlugin(currentPath, helperName) {
     return function(babel) {
       const t = babel.types;
@@ -215,7 +254,7 @@
     const helperName = '__webly_pick_' + Math.random().toString(36).slice(2, 8);
     const transformed = Babel.transform(code, {
       presets,
-      plugins: [noDefaultExternalImportPlugin, localNamedImportFallbackPlugin(path, helperName)],
+      plugins: [noDefaultExternalImportPlugin, safeReactRouterPlugin, localNamedImportFallbackPlugin(path, helperName)],
       filename: path,
       sourceType: 'module',
     }).code;
@@ -225,6 +264,7 @@
       '  if (mod && name in Object(mod) && mod[name] !== undefined) return mod[name];',
       '  const d = mod && mod.default;',
       '  if (d && (typeof d === "object" || typeof d === "function") && name in Object(d) && d[name] !== undefined) return d[name];',
+      '  if (typeof d === "function" && name === "initialize") return function(){};',
       // Last-resort fallback: if no match, return the default itself
       '  if (d !== undefined && d !== null) return d;',
       '  return undefined;',
