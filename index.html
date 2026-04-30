@@ -61,14 +61,46 @@
   // ───── Single fetch interceptor: rewrite /api/data/* and /api/proxy/* ─────
   (function(){
     const origFetch = window.fetch.bind(window);
+    function aliasField(obj, target, sources){
+      if (!obj || typeof obj !== 'object') return;
+      if (obj[target] != null) return;
+      for (const s of sources) { if (obj[s] != null) { obj[target] = obj[s]; return; } }
+    }
+    function normalizeRecord(r){
+      if (!r || typeof r !== 'object') return r;
+      // Cross-name aliases so AI-generated apps don't crash on missing fields
+      aliasField(r, 'name',        ['title','label','product_name','heading']);
+      aliasField(r, 'title',       ['name','label']);
+      aliasField(r, 'image',       ['image_url','img','imageUrl','photo','picture','thumbnail']);
+      aliasField(r, 'image_url',   ['image','img','imageUrl','photo','picture','thumbnail']);
+      aliasField(r, 'imageUrl',    ['image_url','image']);
+      aliasField(r, 'description', ['desc','details','body','content']);
+      aliasField(r, 'price',       ['cost','amount']);
+      aliasField(r, 'category',    ['type','tag','collection']);
+      return r;
+    }
+    async function maybeNormalize(res){
+      try {
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) return res;
+        const cloned = res.clone();
+        const data = await cloned.json();
+        let next;
+        if (Array.isArray(data)) next = data.map(normalizeRecord);
+        else next = normalizeRecord(data);
+        return new Response(JSON.stringify(next), { status: res.status, statusText: res.statusText, headers: res.headers });
+      } catch(_){ return res; }
+    }
     window.fetch = function(input, init){
       try {
         let url = typeof input === 'string' ? input : (input && input.url) || '';
+        let isApiData = false;
         let newInput = input;
         if (typeof url === 'string') {
           if (url.startsWith('/api/data/')) {
             const newUrl = window.__WEBLY__.apiBase + '/data' + url.replace(/^\/api\/data/, '');
             newInput = (typeof input === 'string') ? newUrl : new Request(newUrl, input);
+            isApiData = true;
           } else if (url.startsWith('/api/proxy/')) {
             const newUrl = window.__WEBLY__.proxyBase + url.replace(/^\/api\/proxy/, '');
             newInput = (typeof input === 'string') ? newUrl : new Request(newUrl, input);
@@ -78,7 +110,8 @@
         const headers = new Headers(init.headers || (typeof input !== 'string' ? input.headers : undefined));
         if (!headers.has('x-webly-session')) headers.set('x-webly-session', _sess);
         init.headers = headers;
-        return origFetch(newInput, init);
+        const p = origFetch(newInput, init);
+        return isApiData ? p.then(maybeNormalize) : p;
       } catch(_) {
         return origFetch(input, init);
       }
