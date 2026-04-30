@@ -161,12 +161,105 @@
     }};
   }
 
+  function localNamedImportFallbackPlugin(currentPath, helperName) {
+    return function(babel) {
+      const t = babel.types;
+      const isLocal = function(source) { return typeof source === 'string' && !!resolvePath(currentPath, source); };
+      const pickCall = function(ns, importedName) {
+        return t.callExpression(t.identifier(helperName), [ns, t.stringLiteral(importedName)]);
+      };
+      return { visitor: {
+        ImportDeclaration(path) {
+          const source = path.node.source.value;
+          if (!isLocal(source) || path.node.importKind === 'type') return;
+          const named = path.node.specifiers.filter((s) => t.isImportSpecifier(s) && s.importKind !== 'type');
+          if (!named.length) return;
+          const keep = path.node.specifiers.filter((s) => !named.includes(s));
+          const ns = path.scope.generateUidIdentifier('webly_mod');
+          const replacements = [t.importDeclaration([t.importNamespaceSpecifier(ns)], t.stringLiteral(source))];
+          if (keep.length) replacements.push(t.importDeclaration(keep, t.stringLiteral(source)));
+          for (const spec of named) {
+            const imported = spec.imported && (spec.imported.name || spec.imported.value);
+            if (!imported) continue;
+            replacements.push(t.variableDeclaration('const', [
+              t.variableDeclarator(spec.local, pickCall(ns, imported)),
+            ]));
+          }
+          path.replaceWithMultiple(replacements);
+        },
+        ExportNamedDeclaration(path) {
+          const source = path.node.source && path.node.source.value;
+          if (!source || !isLocal(source) || !path.node.specifiers.length) return;
+          const ns = path.scope.generateUidIdentifier('webly_reexport');
+          const replacements = [t.importDeclaration([t.importNamespaceSpecifier(ns)], t.stringLiteral(source))];
+          const exportSpecs = [];
+          for (const spec of path.node.specifiers) {
+            const imported = spec.local && (spec.local.name || spec.local.value);
+            if (!imported) continue;
+            const local = path.scope.generateUidIdentifierBasedOnNode(spec.exported);
+            replacements.push(t.variableDeclaration('const', [
+              t.variableDeclarator(local, pickCall(ns, imported)),
+            ]));
+            exportSpecs.push(t.exportSpecifier(local, spec.exported));
+          }
+          if (exportSpecs.length) replacements.push(t.exportNamedDeclaration(null, exportSpecs));
+          path.replaceWithMultiple(replacements);
+        },
+      }};
+    };
+  }
+
   function transformJs(code, path) {
     const presets = [['react', { runtime: 'classic' }]];
     if (/\.tsx?$/.test(path)) presets.push(['typescript', { allExtensions: true, isTSX: true }]);
-    return Babel.transform(code, {
-      presets, plugins: [noDefaultExternalImportPlugin], filename: path, sourceType: 'module',
+    const helperName = '__webly_pick_' + Math.random().toString(36).slice(2, 8);
+    const transformed = Babel.transform(code, {
+      presets,
+      plugins: [noDefaultExternalImportPlugin, localNamedImportFallbackPlugin(path, helperName)],
+      filename: path,
+      sourceType: 'module',
     }).code;
+    return [
+      'const ' + helperName + ' = function(mod, name){',
+      '  if (mod && Object.prototype.hasOwnProperty.call(mod, name)) return mod[name];',
+      '  const d = mod && mod.default;',
+      '  if (d && (typeof d === "object" || typeof d === "function") && name in d) return d[name];',
+      '  return undefined;',
+      '};',
+      transformed,
+    ].join('\n');
+  }
+
+  function hasDirectNamedExport(code, exportName, path) {
+    let found = false;
+    try {
+      Babel.transform(code, {
+        filename: path,
+        sourceType: 'module',
+        plugins: [function(babel){
+          const t = babel.types;
+          return { visitor: {
+            ExportNamedDeclaration(p) {
+              const node = p.node;
+              if (node.declaration) {
+                const decl = node.declaration;
+                if ((t.isFunctionDeclaration(decl) || t.isClassDeclaration(decl)) && decl.id && decl.id.name === exportName) found = true;
+                if (t.isVariableDeclaration(decl)) {
+                  for (const d of decl.declarations) if (t.isIdentifier(d.id) && d.id.name === exportName) found = true;
+                }
+              }
+              for (const s of node.specifiers || []) {
+                const exported = s.exported && (s.exported.name || s.exported.value);
+                if (exported === exportName) found = true;
+              }
+            },
+          }};
+        }],
+      });
+    } catch (_) {
+      return code.indexOf('export') !== -1 && code.indexOf(exportName) !== -1;
+    }
+    return found;
   }
 
   // CSS imports → JS module that injects a <style> tag and exports {}
@@ -251,37 +344,9 @@
         code += "\n;export default {};\n";
       }
 
-      // Shim 2: ensure every named binding requested by ANY consumer is a real
-      // direct export. A local declaration or a re-export-star alone can still
-      // fail during browser module linking with "Importing binding name ... not found".
-      const required = requiredExports[path];
-      if (required && required.size) {
-        const additions = [];
-        for (const name of required) {
-          // Detect ANY existing export of this name (declaration, list, alias, default-as).
-          const reAnyExport = new RegExp(
-            "export\s+(?:async\s+)?(?:function\*?|class|const|let|var)\s+" + name + "\b"
-            + "|export\s*\{[^}]*(?:\b" + name + "\b\s*(?:,|as\s+\w+|\}))"
-            + "|export\s*\{[^}]*\bas\s+" + name + "\b"
-            + "|export\s+default\s+(?:function\*?|class)\s+" + name + "\b"
-          );
-          if (reAnyExport.test(code)) continue;
-          const reAnyDecl = new RegExp(
-            "(?:^|[^\w$.])(?:function\*?|class|const|let|var)\s+" + name + "\b"
-          );
-          if (reAnyDecl.test(code)) {
-            const uid = "__webly_alias_" + name + "_" + Math.random().toString(36).slice(2, 8);
-            additions.push("const " + uid + " = " + name + "; export { " + uid + " as " + name + " };");
-          } else {
-            const uid = "__webly_missing_" + name + "_" + Math.random().toString(36).slice(2, 8);
-            additions.push("const " + uid + " = undefined; export { " + uid + " as " + name + " };");
-          }
-        }
-        if (additions.length) {
-          code += "\n;" + additions.join('\n') + "\n";
-          console.warn('[Webly] Backfilled direct exports', additions.length, 'in', path);
-        }
-      }
+      // Named local imports are converted to namespace imports above, so we no
+      // longer mutate a module's export table here. Mutating exports caused hard
+      // browser syntax errors like "Duplicate export of 'seedProducts'".
     }
 
     const blob = new Blob([code], { type: 'text/javascript' });
